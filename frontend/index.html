@@ -37,10 +37,96 @@
           <button class="btn-icon" @click="toggleWhiteNoise" :class="{ active: isPlaying }">
             {{ isPlaying ? '🔊 白噪音开' : '🔇 白噪音关' }}
           </button>
+          <button class="btn-icon" @click="toggleNoisePanel" :class="{ active: showNoisePanel }">
+            ⚙️ 设置
+          </button>
           <span class="username">欢迎, {{ user.username }}</span>
           <button class="btn-outline" @click="handleLogout">退出</button>
         </div>
       </header>
+
+      <div v-if="showNoisePanel" class="noise-panel">
+        <div class="noise-panel-content">
+          <div class="noise-panel-header">
+            <h3>🎵 白噪音设置</h3>
+            <button class="btn-close" @click="toggleNoisePanel">×</button>
+          </div>
+
+          <div class="noise-panel-section">
+            <label class="section-label">声音类型</label>
+            <div class="noise-type-grid">
+              <button
+                v-for="type in noiseTypes"
+                :key="type.value"
+                class="noise-type-btn"
+                :class="{ active: currentNoiseType === type.value }"
+                @click="currentNoiseType = type.value; handleNoiseTypeChange()"
+              >
+                <span class="noise-icon">{{ type.icon }}</span>
+                <span class="noise-label">{{ type.label }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="noise-panel-section">
+            <label class="section-label">
+              音量: <span class="volume-value">{{ Math.round(currentVolume * 100) }}%</span>
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="0.2"
+              step="0.005"
+              v-model="currentVolume"
+              @input="handleVolumeChange"
+              class="volume-slider"
+            >
+          </div>
+
+          <div class="noise-panel-section">
+            <label class="section-label">📁 场景预设</label>
+            <div class="preset-list">
+              <div
+                v-for="preset in presets"
+                :key="preset.id"
+                class="preset-item"
+              >
+                <div class="preset-info">
+                  <div class="preset-name">
+                    {{ getNoiseTypeIcon(preset.noiseType) }} {{ preset.name }}
+                    <span v-if="preset.autoPlay" class="auto-play-badge">自动播放</span>
+                  </div>
+                  <div class="preset-detail">
+                    {{ getNoiseTypeLabel(preset.noiseType) }} · {{ Math.round(preset.volume * 100) }}%
+                  </div>
+                </div>
+                <div class="preset-actions">
+                  <button class="btn-small btn-primary" @click="applyPreset(preset)">应用</button>
+                  <button class="btn-small btn-danger" @click="deletePreset(preset.id)">删除</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="noise-panel-section">
+            <label class="section-label">💾 保存当前设置为预设</label>
+            <div class="save-preset-form">
+              <input
+                type="text"
+                v-model="newPresetName"
+                placeholder="预设名称，如：深夜记录"
+                class="preset-input"
+                @keyup.enter="savePreset"
+              >
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="newPresetAutoPlay">
+                应用时自动播放
+              </label>
+              <button class="btn-primary" @click="savePreset">保存预设</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <main class="content">
         <div class="stats-header">
