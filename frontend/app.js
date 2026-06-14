@@ -52,6 +52,7 @@ createApp({
     let noiseNode = null;
     let gainNode = null;
     let filterNode = null;
+    let activeNoiseType = null;
 
     function getToken() {
       return localStorage.getItem('dream_token');
@@ -276,14 +277,15 @@ createApp({
       createNoiseNodes();
     }
 
-    function createNoiseNodes() {
+    function createNoiseNodes(volumeOverride = null) {
       const noiseBuffer = generateNoiseBuffer(currentNoiseType.value);
       noiseNode = audioContext.createBufferSource();
       noiseNode.buffer = noiseBuffer;
       noiseNode.loop = true;
 
       gainNode = audioContext.createGain();
-      gainNode.gain.value = currentVolume.value;
+      const vol = volumeOverride !== null ? volumeOverride : currentVolume.value;
+      gainNode.gain.value = vol;
 
       filterNode = audioContext.createBiquadFilter();
       filterNode.type = 'lowpass';
@@ -294,6 +296,7 @@ createApp({
       gainNode.connect(audioContext.destination);
 
       noiseNode.start();
+      activeNoiseType = currentNoiseType.value;
     }
 
     function getFilterFrequency(type) {
@@ -315,7 +318,8 @@ createApp({
       if (filterNode) {
         filterNode.disconnect();
       }
-      createNoiseNodes();
+      const vol = isPlaying.value ? null : 0;
+      createNoiseNodes(vol);
     }
 
     function toggleWhiteNoise() {
@@ -333,11 +337,16 @@ createApp({
     function startWhiteNoise() {
       if (!audioContext) {
         createWhiteNoise();
-      } else if (audioContext.state === 'suspended') {
-        audioContext.resume();
-      }
-      if (gainNode) {
-        gainNode.gain.setValueAtTime(currentVolume.value, audioContext.currentTime);
+      } else {
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+        if (activeNoiseType !== currentNoiseType.value) {
+          updateNoiseType();
+        }
+        if (gainNode) {
+          gainNode.gain.setValueAtTime(currentVolume.value, audioContext.currentTime);
+        }
       }
       isPlaying.value = true;
     }
@@ -356,7 +365,7 @@ createApp({
     }
 
     function handleNoiseTypeChange() {
-      if (audioContext && isPlaying.value) {
+      if (audioContext) {
         updateNoiseType();
       }
     }
@@ -396,9 +405,15 @@ createApp({
           handleVolumeChange();
         }
       } else {
-        if (audioContext && isPlaying.value) {
-          updateNoiseType();
-          handleVolumeChange();
+        if (audioContext) {
+          if (activeNoiseType !== preset.noiseType) {
+            updateNoiseType();
+          }
+          if (isPlaying.value) {
+            handleVolumeChange();
+          } else if (gainNode) {
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+          }
         }
       }
     }
